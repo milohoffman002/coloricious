@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coloricious</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e0e12;
+    --surface: rgba(255,255,255,0.06);
+    --surface-solid: #1a1a22;
+    --text: #f0ede8;
+    --text-muted: rgba(240,237,232,0.4);
+    --cell-gap: 3px;
+    --cell-size: 54px;
+    --face-gap: 6px;
+    --radius: 7px;
+    --red: #e8364f;
+    --orange: #ff8c2e;
+    --yellow: #ffd23e;
+    --green: #2ec47a;
+    --blue: #3b7dff;
+    --white: #f0ede8;
+    --face-bg: rgba(255,255,255,0.04);
+    --face-border: rgba(255,255,255,0.06);
+    --btn-border: rgba(255,255,255,0.12);
+    --glow-intensity: 0;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    position: relative;
+    transition: background 1.5s ease;
+  }
+
+  /* ===== STARFIELD ===== */
+  #starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ===== COLOR WASH OVERLAY ===== */
+  .color-wash {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 2s ease;
+    pointer-events: none;
+    background: 
+      radial-gradient(ellipse at 20% 50%, rgba(232,54,79,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(59,125,255,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 90%, rgba(46,196,122,0.06) 0%, transparent 50%);
+  }
+
+  .color-wash.active {
+    opacity: 1;
+    animation: washPulse 12s ease-in-out infinite;
+  }
+
+  @keyframes washPulse {
+    0%, 100% { opacity: 0.7; }
+    33% { opacity: 1; }
+    66% { opacity: 0.5; }
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+    z-index: 2;
+    position: relative;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--red), var(--orange), var(--yellow), var(--green), var(--blue));
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: logoShift 8s ease-in-out infinite;
+  }
+
+  @keyframes logoShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .subtitle {
+    font-size: 0.78rem;
+    font-weight: 300;
+    color: var(--text-muted);
+    margin-top: 2px;
+    letter-spacing: 0.08em;
+  }
+
+  /* ===== TOP BAR ===== */
+  .top-bar {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid var(--btn-border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 1.1rem;
+  }
+
+  .icon-btn:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+  }
+
+  .icon-btn.active {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: 0 0 20px rgba(59,125,255,0.15);
+  }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal {
+    background: #1a1a24;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 36px 32px;
+    max-width: 440px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    transform: translateY(20px) scale(0.95);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+
+  .modal-overlay.open .modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .modal h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 18px;
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+  }
+
+  .modal p {
+    font-size: 0.82rem;
+    font-weight: 300;
+    line-height: 1.65;
+    color: rgba(240,237,232,0.7);
+    margin-bottom: 8px;
+  }
+
+  .modal .close-modal {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--btn-border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .modal .close-modal:hover {
+    background: rgba(255,255,255,0.12);
+  }
+
+  .modal .tip-box {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 12px;
+  }
+
+  .modal .tip-box p {
+    margin: 0;
+    font-size: 0.78rem;
+  }
+
+  .modal .tip-box .tip-label {
+    font-weight: 600;
+    color: var(--yellow);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  /* ===== CUBE NET ===== */
+  .cube-net {
+    display: grid;
+    grid-template-columns: repeat(4, calc(var(--cell-size) * 3 + var(--cell-gap) * 2 + 12px));
+    grid-template-rows: repeat(3, calc(var(--cell-size) * 3 + var(--cell-gap) * 2 + 12px));
+    gap: var(--face-gap);
+    position: relative;
+    z-index: 2;
+  }
+
+  .face { display: none; }
+  .face[data-face="U"] { display: grid; grid-column: 2; grid-row: 1; }
+  .face[data-face="L"] { display: grid; grid-column: 1; grid-row: 2; }
+  .face[data-face="F"] { display: grid; grid-column: 2; grid-row: 2; }
+  .face[data-face="R"] { display: grid; grid-column: 3; grid-row: 2; }
+  .face[data-face="B"] { display: grid; grid-column: 4; grid-row: 2; }
+  .face[data-face="D"] { display: grid; grid-column: 2; grid-row: 3; }
+
+  .face {
+    grid-template-columns: repeat(3, var(--cell-size));
+    grid-template-rows: repeat(3, var(--cell-size));
+    gap: var(--cell-gap);
+    background: var(--face-bg);
+    border: 1px solid var(--face-border);
+    padding: 6px;
+    border-radius: 12px;
+    position: relative;
+    transition: box-shadow 0.6s ease, border-color 0.6s ease;
+  }
+
+  .face.completed {
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  .cell {
+    border-radius: var(--radius);
+    cursor: grab;
+    position: relative;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+    box-shadow: 
+      inset 0 1px 0 rgba(255,255,255,0.2),
+      0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .cell:active { cursor: grabbing; }
+
+  .cell[data-color="R"] { background: var(--red); }
+  .cell[data-color="O"] { background: var(--orange); }
+  .cell[data-color="Y"] { background: var(--yellow); }
+  .cell[data-color="G"] { background: var(--green); }
+  .cell[data-color="B"] { background: var(--blue); }
+  .cell[data-color="W"] { background: var(--white); }
+
+  .cell.dragging {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+    transform: scale(1.08);
+    z-index: 10;
+  }
+
+  /* Face completion animation */
+  .face.celebrating .cell {
+    animation: cellPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .face.celebrating .cell:nth-child(1) { animation-delay: 0.00s; }
+  .face.celebrating .cell:nth-child(2) { animation-delay: 0.04s; }
+  .face.celebrating .cell:nth-child(3) { animation-delay: 0.08s; }
+  .face.celebrating .cell:nth-child(4) { animation-delay: 0.06s; }
+  .face.celebrating .cell:nth-child(5) { animation-delay: 0.10s; }
+  .face.celebrating .cell:nth-child(6) { animation-delay: 0.14s; }
+  .face.celebrating .cell:nth-child(7) { animation-delay: 0.12s; }
+  .face.celebrating .cell:nth-child(8) { animation-delay: 0.16s; }
+  .face.celebrating .cell:nth-child(9) { animation-delay: 0.20s; }
+
+  @keyframes cellPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.18) rotate(2deg); }
+    70% { transform: scale(0.95) rotate(-1deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .face.celebrating {
+    box-shadow: 0 0 30px rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  /* Full solve mega celebration */
+  @keyframes megaPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  .cube-net.all-solved {
+    animation: megaPulse 1s ease-in-out 3;
+  }
+
+  /* ===== CONTROLS ===== */
+  .controls {
+    margin-top: 24px;
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+    position: relative;
+  }
+
+  .btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 10px 24px;
+    border: 1px solid var(--btn-border);
+    border-radius: 100px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .btn:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  /* ===== STATUS ===== */
+  .status {
+    margin-top: 14px;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    min-height: 22px;
+    z-index: 2;
+    position: relative;
+    transition: all 0.4s ease;
+  }
+
+  .status.solved {
+    color: var(--green);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 20px rgba(46,196,122,0.4);
+  }
+
+  /* ===== CONFETTI ===== */
+  .confetti-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    top: -10px;
+    animation: confettiFall linear forwards;
+  }
+
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg) scale(0.5); opacity: 0; }
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 800px) {
+    :root { --cell-size: 38px; --cell-gap: 2px; }
+    .cube-net { transform: scale(0.92); }
+    .logo { font-size: 1.6rem; }
+  }
+
+  @media (max-width: 560px) {
+    :root { --cell-size: 30px; --cell-gap: 2px; }
+    .cube-net { transform: scale(0.85); }
+    .logo { font-size: 1.3rem; }
+  }
+
+  /* Scrollbar for modal */
+  .modal::-webkit-scrollbar { width: 4px; }
+  .modal::-webkit-scrollbar-track { background: transparent; }
+  .modal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="color-wash" id="colorWash"></div>
+
+<div class="top-bar">
+  <button class="icon-btn" id="themeBtn" title="Toggle color atmosphere">✦</button>
+  <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+</div>
+
+<!-- INSTRUCTIONS MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>How to Play</h2>
+    <p>Welcome to Coloricious — a color-matching puzzle unfolded flat on your screen.</p>
+    <p>You're looking at six connected panels arranged in a cross shape. Each panel is a 3×3 grid of colored tiles. When solved, every tile on each panel is the same color.</p>
+
+    <h3>Moving Tiles</h3>
+    <p>Grab any tile and drag it horizontally or vertically. The entire row or column of tiles in that direction will slide together — and because the panels are all connected, tiles will flow from one panel into its neighbor, just like they're wrapped around a single object.</p>
+
+    <h3>The Goal</h3>
+    <p>After shuffling, the colors are mixed across all six panels. Your challenge is to slide rows and columns until each panel is restored to a single, solid color.</p>
+
+    <h3>Panel Connections</h3>
+    <p>The four panels in the horizontal band (left to right) share their rows — sliding a row on any of them moves that same row across all four. The top and bottom panels share columns with the center panel.</p>
+
+    <div class="tip-box">
+      <span class="tip-label">💡 Tip</span>
+      <p>Start by completing one panel, then work on adjacent ones. Watch how your moves affect neighboring panels — every slide changes more than you might expect!</p>
+    </div>
+
+    <button class="close-modal" id="closeModal">Got it, let's play!</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Coloricious</div>
+  <div class="subtitle">slide · match · solve</div>
+</header>
+
+<div class="cube-net" id="cubeNet"></div>
+
+<div class="controls">
+  <button class="btn" id="shuffleBtn">Shuffle</button>
+  <button class="btn" id="resetBtn">Reset</button>
+</div>
+
+<div class="status" id="status"></div>
+<div class="confetti-container" id="confettiContainer"></div>
+
+<script>
+// ==================== AUDIO ENGINE ====================
+const AudioEngine = (() => {
+  let ctx = null;
+
+  function getCtx() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function slide() {
+    try {
+      const c = getCtx();
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      const filter = c.createBiquadFilter();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600 + Math.random() * 200, c.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300 + Math.random() * 100, c.currentTime + 0.08);
+
+      filter.type = 'lowpass';
+      filter.frequency.value = 2000;
+
+      gain.gain.setValueAtTime(0.08, c.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.12);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(c.destination);
+      osc.start(c.currentTime);
+      osc.stop(c.currentTime + 0.12);
+    } catch(e) {}
+  }
+
+  function faceComplete() {
+    try {
+      const c = getCtx();
+      const notes = [523, 659, 784]; // C5 E5 G5
+      notes.forEach((freq, i) => {
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, c.currentTime + i * 0.08);
+        gain.gain.linearRampToValueAtTime(0.06, c.currentTime + i * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.08 + 0.3);
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.start(c.currentTime + i * 0.08);
+        osc.stop(c.currentTime + i * 0.08 + 0.3);
+      });
+    } catch(e) {}
+  }
+
+  function fullSolve() {
+    try {
+      const c = getCtx();
+      const melody = [523, 587, 659, 784, 1047]; // ascending
+      melody.forEach((freq, i) => {
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, c.currentTime + i * 0.1);
+        gain.gain.linearRampToValueAtTime(0.07, c.currentTime + i * 0.1 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + i * 0.1 + 0.5);
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.start(c.currentTime + i * 0.1);
+        osc.stop(c.currentTime + i * 0.1 + 0.5);
+      });
+    } catch(e) {}
+  }
+
+  return { slide, faceComplete, fullSolve };
+})();
+
+
+// ==================== STARFIELD ====================
+const Starfield = (() => {
+  const canvas = document.getElementById('starfield');
+  const sCtx = canvas.getContext('2d');
+  let stars = [];
+  let animId = null;
+  let active = false;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function createStars() {
+    stars = [];
+    const count = Math.floor((canvas.width * canvas.height) / 4000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 1.5 + 0.3,
+        opacity: Math.random() * 0.6 + 0.1,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+        twinkleOffset: Math.random() * Math.PI * 2,
+        drift: (Math.random() - 0.5) * 0.08,
+      });
+    }
+  }
+
+  let time = 0;
+  function draw() {
+    if (!active) return;
+    sCtx.clearRect(0, 0, canvas.width, canvas.height);
+    time += 0.016;
+
+    for (const s of stars) {
+      const twinkle = Math.sin(time * s.twinkleSpeed * 60 + s.twinkleOffset) * 0.3 + 0.7;
+      const alpha = s.opacity * twinkle;
+      sCtx.beginPath();
+      sCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      sCtx.fillStyle = `rgba(240, 237, 232, ${alpha})`;
+      sCtx.fill();
+
+      // Gentle drift
+      s.y += s.drift;
+      if (s.y > canvas.height + 5) s.y = -5;
+      if (s.y < -5) s.y = canvas.height + 5;
+    }
+    animId = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    active = true;
+    resize();
+    createStars();
+    draw();
+  }
+
+  function stop() {
+    active = false;
+    if (animId) cancelAnimationFrame(animId);
+    sCtx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function toggle() {
+    if (active) { stop(); return false; }
+    else { start(); return true; }
+  }
+
+  window.addEventListener('resize', () => {
+    resize();
+    if (active) createStars();
+  });
+
+  resize();
+
+  return { toggle, isActive: () => active };
+})();
+
+
+// ==================== CONFETTI ====================
+function launchConfetti() {
+  const container = document.getElementById('confettiContainer');
+  const colors = ['#e8364f', '#ff8c2e', '#ffd23e', '#2ec47a', '#3b7dff', '#f0ede8'];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+    piece.style.animationDelay = Math.random() * 0.6 + 's';
+    piece.style.width = (Math.random() * 6 + 4) + 'px';
+    piece.style.height = (Math.random() * 6 + 4) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    container.appendChild(piece);
+    setTimeout(() => piece.remove(), 4000);
+  }
+}
+
+
+// ==================== CUBE STATE ====================
+const FACES = ['U', 'D', 'F', 'B', 'L', 'R'];
+const SOLVED_COLORS = { U: 'W', D: 'Y', F: 'R', B: 'O', L: 'G', R: 'B' };
+
+let cube = {};
+let moveCount = 0;
+let previousCompletedFaces = new Set();
+
+function initCube() {
+  cube = {};
+  for (const f of FACES) {
+    cube[f] = Array.from({ length: 3 }, () => Array(3).fill(SOLVED_COLORS[f]));
+  }
+  moveCount = 0;
+  previousCompletedFaces = new Set(FACES);
+}
+
+function rotateFaceCW(face) {
+  const f = cube[face];
+  cube[face] = [
+    [f[2][0], f[1][0], f[0][0]],
+    [f[2][1], f[1][1], f[0][1]],
+    [f[2][2], f[1][2], f[0][2]],
+  ];
+}
+
+function rotateFaceCCW(face) {
+  const f = cube[face];
+  cube[face] = [
+    [f[0][2], f[1][2], f[2][2]],
+    [f[0][1], f[1][1], f[2][1]],
+    [f[0][0], f[1][0], f[2][0]],
+  ];
+}
+
+// ==================== MOVES ====================
+function moveU() {
+  rotateFaceCW('U');
+  const tmp = [...cube.F[0]];
+  cube.F[0] = [...cube.R[0]];
+  cube.R[0] = [...cube.B[0]];
+  cube.B[0] = [...cube.L[0]];
+  cube.L[0] = tmp;
+}
+function moveUi() { moveU(); moveU(); moveU(); }
+
+function moveD() {
+  rotateFaceCW('D');
+  const tmp = [...cube.F[2]];
+  cube.F[2] = [...cube.L[2]];
+  cube.L[2] = [...cube.B[2]];
+  cube.B[2] = [...cube.R[2]];
+  cube.R[2] = tmp;
+}
+function moveDi() { moveD(); moveD(); moveD(); }
+
+function moveF() {
+  rotateFaceCW('F');
+  const tmp = [cube.U[2][0], cube.U[2][1], cube.U[2][2]];
+  cube.U[2][0] = cube.L[2][2]; cube.U[2][1] = cube.L[1][2]; cube.U[2][2] = cube.L[0][2];
+  cube.L[0][2] = cube.D[0][0]; cube.L[1][2] = cube.D[0][1]; cube.L[2][2] = cube.D[0][2];
+  cube.D[0][0] = cube.R[2][0]; cube.D[0][1] = cube.R[1][0]; cube.D[0][2] = cube.R[0][0];
+  cube.R[0][0] = tmp[0]; cube.R[1][0] = tmp[1]; cube.R[2][0] = tmp[2];
+}
+function moveFi() { moveF(); moveF(); moveF(); }
+
+function moveB() {
+  rotateFaceCW('B');
+  const tmp = [cube.U[0][0], cube.U[0][1], cube.U[0][2]];
+  cube.U[0][0] = cube.R[0][2]; cube.U[0][1] = cube.R[1][2]; cube.U[0][2] = cube.R[2][2];
+  cube.R[0][2] = cube.D[2][2]; cube.R[1][2] = cube.D[2][1]; cube.R[2][2] = cube.D[2][0];
+  cube.D[2][0] = cube.L[0][0]; cube.D[2][1] = cube.L[1][0]; cube.D[2][2] = cube.L[2][0];
+  cube.L[0][0] = tmp[2]; cube.L[1][0] = tmp[1]; cube.L[2][0] = tmp[0];
+}
+function moveBi() { moveB(); moveB(); moveB(); }
+
+function moveL() {
+  rotateFaceCW('L');
+  const tmp = [cube.U[0][0], cube.U[1][0], cube.U[2][0]];
+  cube.U[0][0] = cube.B[2][2]; cube.U[1][0] = cube.B[1][2]; cube.U[2][0] = cube.B[0][2];
+  cube.B[0][2] = cube.D[2][0]; cube.B[1][2] = cube.D[1][0]; cube.B[2][2] = cube.D[0][0];
+  cube.D[0][0] = cube.F[0][0]; cube.D[1][0] = cube.F[1][0]; cube.D[2][0] = cube.F[2][0];
+  cube.F[0][0] = tmp[0]; cube.F[1][0] = tmp[1]; cube.F[2][0] = tmp[2];
+}
+function moveLi() { moveL(); moveL(); moveL(); }
+
+function moveR() {
+  rotateFaceCW('R');
+  const tmp = [cube.U[0][2], cube.U[1][2], cube.U[2][2]];
+  cube.U[0][2] = cube.F[0][2]; cube.U[1][2] = cube.F[1][2]; cube.U[2][2] = cube.F[2][2];
+  cube.F[0][2] = cube.D[0][2]; cube.F[1][2] = cube.D[1][2]; cube.F[2][2] = cube.D[2][2];
+  cube.D[0][2] = cube.B[2][0]; cube.D[1][2] = cube.B[1][0]; cube.D[2][2] = cube.B[0][0];
+  cube.B[0][0] = tmp[2]; cube.B[1][0] = tmp[1]; cube.B[2][0] = tmp[0];
+}
+function moveRi() { moveR(); moveR(); moveR(); }
+
+function moveM() {
+  const tmp = [cube.U[0][1], cube.U[1][1], cube.U[2][1]];
+  cube.U[0][1] = cube.B[2][1]; cube.U[1][1] = cube.B[1][1]; cube.U[2][1] = cube.B[0][1];
+  cube.B[0][1] = cube.D[2][1]; cube.B[1][1] = cube.D[1][1]; cube.B[2][1] = cube.D[0][1];
+  cube.D[0][1] = cube.F[0][1]; cube.D[1][1] = cube.F[1][1]; cube.D[2][1] = cube.F[2][1];
+  cube.F[0][1] = tmp[0]; cube.F[1][1] = tmp[1]; cube.F[2][1] = tmp[2];
+}
+function moveMi() { moveM(); moveM(); moveM(); }
+
+function moveE() {
+  const tmp = [...cube.F[1]];
+  cube.F[1] = [...cube.L[1]];
+  cube.L[1] = [...cube.B[1]];
+  cube.B[1] = [...cube.R[1]];
+  cube.R[1] = tmp;
+}
+function moveEi() { moveE(); moveE(); moveE(); }
+
+function moveS() {
+  const tmp = [cube.U[1][0], cube.U[1][1], cube.U[1][2]];
+  cube.U[1][0] = cube.L[2][1]; cube.U[1][1] = cube.L[1][1]; cube.U[1][2] = cube.L[0][1];
+  cube.L[0][1] = cube.D[1][0]; cube.L[1][1] = cube.D[1][1]; cube.L[2][1] = cube.D[1][2];
+  cube.D[1][0] = cube.R[2][1]; cube.D[1][1] = cube.R[1][1]; cube.D[1][2] = cube.R[0][1];
+  cube.R[0][1] = tmp[0]; cube.R[1][1] = tmp[1]; cube.R[2][1] = tmp[2];
+}
+function moveSi() { moveS(); moveS(); moveS(); }
+
+
+// ==================== MOVE MAPPING ====================
+function executeMove(face, type, index, direction) {
+  const key = `${face}_${type}_${index}_${direction}`;
+
+  const moveMap = {
+    // === FRONT face ===
+    'F_row_0_left': moveU,    'F_row_0_right': moveUi,
+    'F_row_1_right': moveE,   'F_row_1_left': moveEi,
+    'F_row_2_right': moveD,   'F_row_2_left': moveDi,
+    'F_col_0_up': moveLi,     'F_col_0_down': moveL,
+    'F_col_1_up': moveMi,     'F_col_1_down': moveM,
+    'F_col_2_up': moveR,      'F_col_2_down': moveRi,
+
+    // === UP face ===
+    'U_row_2_right': moveF,    'U_row_2_left': moveFi,
+    'U_row_1_right': moveS,    'U_row_1_left': moveSi,
+    'U_row_0_right': moveBi,   'U_row_0_left': moveB,
+    'U_col_0_up': moveLi,     'U_col_0_down': moveL,
+    'U_col_1_up': moveMi,     'U_col_1_down': moveM,
+    'U_col_2_up': moveR,      'U_col_2_down': moveRi,
+
+    // === DOWN face ===
+    'D_row_0_left': moveF,     'D_row_0_right': moveFi,
+    'D_row_1_left': moveS,     'D_row_1_right': moveSi,
+    'D_row_2_left': moveBi,    'D_row_2_right': moveB,
+    'D_col_0_down': moveL,     'D_col_0_up': moveLi,
+    'D_col_1_down': moveM,     'D_col_1_up': moveMi,
+    'D_col_2_down': moveRi,    'D_col_2_up': moveR,
+
+    // === LEFT face ===
+    'L_row_0_left': moveU,     'L_row_0_right': moveUi,
+    'L_row_1_right': moveE,    'L_row_1_left': moveEi,
+    'L_row_2_right': moveD,    'L_row_2_left': moveDi,
+    'L_col_0_up': moveBi,     'L_col_0_down': moveB,
+    'L_col_1_up': moveSi,     'L_col_1_down': moveS,
+    'L_col_2_up': moveF,      'L_col_2_down': moveFi,
+
+    // === RIGHT face ===
+    'R_row_0_left': moveU,     'R_row_0_right': moveUi,
+    'R_row_1_right': moveE,    'R_row_1_left': moveEi,
+    'R_row_2_right': moveD,    'R_row_2_left': moveDi,
+    'R_col_0_up': moveFi,     'R_col_0_down': moveF,
+    'R_col_1_up': moveSi,     'R_col_1_down': moveS,
+    'R_col_2_up': moveB,      'R_col_2_down': moveBi,
+
+    // === BACK face ===
+    'B_row_0_left': moveU,     'B_row_0_right': moveUi,
+    'B_row_1_right': moveE,    'B_row_1_left': moveEi,
+    'B_row_2_right': moveD,    'B_row_2_left': moveDi,
+    'B_col_0_up': moveRi,     'B_col_0_down': moveR,
+    'B_col_1_up': moveMi,     'B_col_1_down': moveM,
+    'B_col_2_up': moveL,      'B_col_2_down': moveLi,
+  };
+
+  const fn = moveMap[key];
+  if (fn) {
+    fn();
+    moveCount++;
+    AudioEngine.slide();
+    render();
+    checkCompleted();
+    return true;
+  }
+  return false;
+}
+
+
+// ==================== RENDERING ====================
+const netEl = document.getElementById('cubeNet');
+const statusEl = document.getElementById('status');
+
+function render() {
+  netEl.innerHTML = '';
+  const faceOrder = ['U', 'L', 'F', 'R', 'B', 'D'];
+
+  for (const face of faceOrder) {
+    const faceEl = document.createElement('div');
+    faceEl.className = 'face';
+    faceEl.dataset.face = face;
+    faceEl.id = 'face-' + face;
+
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.color = cube[face][r][c];
+        cell.dataset.face = face;
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        faceEl.appendChild(cell);
+      }
+    }
+    netEl.appendChild(faceEl);
+  }
+}
+
+function isFaceComplete(face) {
+  const color = cube[face][0][0];
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 3; c++)
+      if (cube[face][r][c] !== color) return false;
+  return true;
+}
+
+function checkCompleted() {
+  const currentCompleted = new Set();
+  let allDone = true;
+
+  for (const f of FACES) {
+    if (isFaceComplete(f)) {
+      currentCompleted.add(f);
+      const el = document.getElementById('face-' + f);
+      if (el) el.classList.add('completed');
+    } else {
+      allDone = false;
+    }
+  }
+
+  // Detect newly completed faces
+  for (const f of currentCompleted) {
+    if (!previousCompletedFaces.has(f)) {
+      // This face just got completed!
+      const el = document.getElementById('face-' + f);
+      if (el) {
+        el.classList.add('celebrating');
+        setTimeout(() => el.classList.remove('celebrating'), 800);
+      }
+      AudioEngine.faceComplete();
+    }
+  }
+
+  previousCompletedFaces = currentCompleted;
+
+  if (allDone && moveCount > 0) {
+    statusEl.textContent = `✦ Solved in ${moveCount} moves! ✦`;
+    statusEl.className = 'status solved';
+    netEl.classList.add('all-solved');
+    AudioEngine.fullSolve();
+    setTimeout(() => launchConfetti(), 200);
+    setTimeout(() => netEl.classList.remove('all-solved'), 3500);
+  } else {
+    statusEl.textContent = moveCount > 0 ? `${moveCount} moves` : '';
+    statusEl.className = 'status';
+  }
+}
+
+
+// ==================== DRAG HANDLING ====================
+let dragState = null;
+const DRAG_THRESHOLD = 18;
+
+function getCellFromEvent(e) {
+  const touch = e.touches ? e.touches[0] : e;
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (el && el.classList.contains('cell')) {
+    return { face: el.dataset.face, row: parseInt(el.dataset.row), col: parseInt(el.dataset.col), el };
+  }
+  return null;
+}
+
+function onPointerDown(e) {
+  const touch = e.touches ? e.touches[0] : e;
+  const cell = getCellFromEvent(e);
+  if (!cell) return;
+  dragState = { startX: touch.clientX, startY: touch.clientY, cell, committed: false };
+  cell.el.classList.add('dragging');
+}
+
+function onPointerMove(e) {
+  if (!dragState) return;
+  const touch = e.touches ? e.touches[0] : e;
+  const dx = touch.clientX - dragState.startX;
+  const dy = touch.clientY - dragState.startY;
+
+  if (!dragState.committed && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+    dragState.committed = true;
+    let type, direction;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      type = 'row'; direction = dx > 0 ? 'right' : 'left';
+    } else {
+      type = 'col'; direction = dy > 0 ? 'down' : 'up';
+    }
+    const index = type === 'row' ? dragState.cell.row : dragState.cell.col;
+    executeMove(dragState.cell.face, type, index, direction);
+    if (dragState?.cell?.el) dragState.cell.el.classList.remove('dragging');
+    dragState = null;
+  }
+  if (e.cancelable) e.preventDefault();
+}
+
+function onPointerUp() {
+  if (dragState?.cell?.el) dragState.cell.el.classList.remove('dragging');
+  dragState = null;
+}
+
+netEl.addEventListener('mousedown', onPointerDown);
+document.addEventListener('mousemove', onPointerMove);
+document.addEventListener('mouseup', onPointerUp);
+netEl.addEventListener('touchstart', onPointerDown, { passive: false });
+document.addEventListener('touchmove', onPointerMove, { passive: false });
+document.addEventListener('touchend', onPointerUp);
+
+
+// ==================== CONTROLS ====================
+const allMoves = [moveU, moveUi, moveD, moveDi, moveF, moveFi, moveB, moveBi, moveL, moveLi, moveR, moveRi];
+
+document.getElementById('shuffleBtn').addEventListener('click', () => {
+  initCube();
+  for (let i = 0; i < 25; i++) {
+    allMoves[Math.floor(Math.random() * allMoves.length)]();
+  }
+  moveCount = 0;
+  previousCompletedFaces = new Set();
+  render();
+  statusEl.textContent = 'Shuffled — make each panel one color!';
+  statusEl.className = 'status';
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  initCube();
+  render();
+  statusEl.textContent = '';
+  statusEl.className = 'status';
+});
+
+// Theme toggle
+const themeBtn = document.getElementById('themeBtn');
+const colorWash = document.getElementById('colorWash');
+let themeActive = false;
+
+themeBtn.addEventListener('click', () => {
+  themeActive = !themeActive;
+  const starActive = Starfield.toggle();
+  colorWash.classList.toggle('active', themeActive);
+  themeBtn.classList.toggle('active', themeActive);
+});
+
+// Help modal
+const modalOverlay = document.getElementById('modalOverlay');
+document.getElementById('helpBtn').addEventListener('click', () => {
+  modalOverlay.classList.add('open');
+});
+document.getElementById('closeModal').addEventListener('click', () => {
+  modalOverlay.classList.remove('open');
+});
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) modalOverlay.classList.remove('open');
+});
+
+// ==================== INIT ====================
+initCube();
+render();
+</script>
+</body>
+</html>

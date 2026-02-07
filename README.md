@@ -2,6 +2,10 @@
 
 A browser-based color-matching puzzle game. Six connected panels, each a 3×3 grid of colored tiles, are laid out flat in a cross pattern. Slide rows and columns to mix and unmix the colors — the goal is to make every panel a single, solid color.
 
+## Play Now
+
+Open [`index.html`](https://milohoffman002.github.io/coloricious/) in your browser to start playing!
+
 ## How It Works
 
 The game presents six interconnected panels arranged in a cross shape:
@@ -74,4 +78,4 @@ Any modern browser with ES6 and Web Audio API support:
 
 ## License
 
-Free to use, modify, and distribute.
+(MIT)[../LICENSE] .. Free to use, modify, and distribute.
